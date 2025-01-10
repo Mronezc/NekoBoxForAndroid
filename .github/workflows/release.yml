@@ -3,13 +3,13 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release Tag"
+        description: 'Release Tag'
         required: true
       publish:
-        description: "Publish: If want ignore"
+        description: 'Publish: If want ignore'
         required: false
       play:
-        description: "Play: If want ignore"
+        description: 'Play: If want ignore'
         required: false
 jobs:
   libcore:
@@ -33,10 +33,11 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22.10"
+          go-version: ^1.21
       - name: Native Build
         if: steps.cache.outputs.cache-hit != 'true'
         run: ./run lib core
+
   build:
     name: Build OSS APK
     runs-on: ubuntu-latest
@@ -76,6 +77,11 @@ jobs:
         with:
           name: APKs
           path: ${{ env.APK }}
+      - name: Download libcore.aar
+        run: |
+          cp app/libs/libcore.aar ./libcore.aar
+          echo "libcore.aar has been copied to the current directory."
+
   publish:
     name: Publish Release
     if: github.event.inputs.publish != 'y'
@@ -84,7 +90,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Donwload Artifacts
+      - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
           name: APKs
@@ -97,6 +103,7 @@ jobs:
           mkdir apks
           find artifacts -name "*.apk" -exec cp {} apks \;
           ./ghr -delete -t "${{ github.token }}" -n "${{ github.event.inputs.tag }}" "${{ github.event.inputs.tag }}" apks
+
   play:
     name: Build Play Bundle
     if: github.event.inputs.play != 'y'
