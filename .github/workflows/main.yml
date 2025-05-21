@@ -1,0 +1,43 @@
+name: Build LibCore
+on:
+  workflow_dispatch:
+
+jobs:
+  libcore:
+    name: Build LibCore
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 生成文件哈希用于缓存标识
+      - name: Generate File Hashes
+        run: |
+          find buildScript libcore/*.sh | xargs cat | sha1sum > golang_status
+          git ls-files libcore | xargs cat | sha1sum > libcore_status
+
+      # 缓存 libcore.aar 文件
+      - name: Cache LibCore
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: app/libs/libcore.aar
+          key: libcore-${{ hashFiles('golang_status', 'libcore_status') }}
+
+      # 仅在缓存未命中时重新编译
+      - name: Install Golang
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/setup-go@v5
+        with:
+          go-version: ^1.24
+
+      - name: Build LibCore
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: ./run lib core
+
+      # 上传编译产物供下载
+      - name: Upload LibCore AAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: libcore.aar
+          path: app/libs/libcore.aar
